@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Turbo Critter Grand Prix</title>
+<link rel="stylesheet" href="style.css">
+<!-- PWA: installable, offline-capable -->
+<meta name="theme-color" content="#241d47">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TurboCritter">
+<!-- Tiny inline boot-error catcher: if the module (or the three.js CDN) fails to
+     load, show a friendly hint instead of a blank page. -->
+<script>
+  window.__TCGP_BOOTED = false;
+  window.addEventListener('error', function (e) {
+    if (!window.__TCGP_BOOTED) {
+      var el = document.getElementById('bootError');
+      if (el) {
+        el.style.display = 'flex';
+        var msg = document.getElementById('bootErrorMsg');
+        if (msg) msg.textContent = (e && e.message) ? e.message : 'Failed to load a script.';
+      }
+    }
+  }, true);
+</script>
+</head>
+<body>
+
+  <!-- The three.js canvas is appended in here -->
+  <div id="app"></div>
+
+  <!-- ============================= HUD (in-race) ============================= -->
+  <div id="hud" class="hidden">
+    <!-- Top-left: position + lap -->
+    <div id="hudTopLeft">
+      <div id="posBadge"><span id="pos">8</span><span id="posSuf">th</span></div>
+      <div id="lap">LAP 1/3</div>
+    </div>
+
+    <!-- Top-center: race timer -->
+    <div id="timer">0:00.0</div>
+
+    <!-- Top-right: mini leaderboard -->
+    <div id="board"></div>
+
+    <!-- Bottom-left: held item -->
+    <div id="itemSlot">
+      <div id="itemIcon">–</div>
+      <div id="itemName">no item</div>
+    </div>
+
+    <!-- Bottom-right: speed + boost meter + coins -->
+    <div id="speedo">
+      <div id="speedRow"><span id="speedVal">0</span><span class="speedUnit">km/h</span></div>
+      <div id="boostBar"><div id="boostFill"></div></div>
+      <div id="boostLabel">BOOST (SHIFT)</div>
+      <div id="coinRow">🪙 <span id="coins">0</span></div>
+    </div>
+
+    <!-- Center overlays -->
+    <div id="toasts"></div>
+    <div id="countdown" class="hidden">3</div>
+    <div id="wrongway" class="hidden">⚠ WRONG WAY ⚠</div>
+
+    <!-- On-screen controls (touch devices only; body gets .touch) -->
+    <div id="touchControls">
+      <div class="tcSide tcLeft">
+        <button class="tcBtn tcSteer" id="tLeft" aria-label="steer left">&#9664;</button>
+        <button class="tcBtn tcSteer" id="tRight" aria-label="steer right">&#9654;</button>
+      </div>
+      <div class="tcSide tcRight">
+        <div class="tcRow">
+          <button class="tcBtn tcSmall" id="tItem" aria-label="use item">🎁</button>
+          <button class="tcBtn tcSmall" id="tBoost" aria-label="boost">⚡</button>
+          <button class="tcBtn tcSmall" id="tBrake" aria-label="brake / reverse">🛑</button>
+        </div>
+        <div class="tcRow">
+          <button class="tcBtn" id="tDrift" aria-label="drift">🌀</button>
+          <button class="tcBtn tcGas" id="tGas" aria-label="accelerate">GAS</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Duck Mode secret message (bottom-left corner, tiny) -->
+    <div id="secretMsg" class="hidden">The ducks were racing all along.</div>
+  </div>
+
+  <!-- Persistent mute button (+ pause on touch devices) -->
+  <button id="muteBtn" title="Mute / unmute">🔊</button>
+  <button id="pauseBtn" title="Pause">⏸</button>
+
+  <!-- ============================= START MENU ============================= -->
+  <div id="menu">
+    <div class="menuCard">
+      <h1 id="title">TURBO CRITTER<br><span>GRAND PRIX</span></h1>
+      <p class="tagline">8 critters. 3 laps. Zero respect for lawns.</p>
+
+      <div id="controlsList">
+        <div><b>W / ↑</b><span>accelerate</span></div>
+        <div><b>S / ↓</b><span>brake / reverse</span></div>
+        <div><b>A D / ← →</b><span>steer</span></div>
+        <div><b>SPACE</b><span>drift (hold) → charge mini-turbo</span></div>
+        <div><b>SHIFT</b><span>use boost meter</span></div>
+        <div><b>E / ENTER</b><span>use item</span></div>
+        <div><b>H</b><span>horn 📯</span></div>
+        <div><b>ESC</b><span>pause</span> <b style="margin-left:8px">P</b><span>debug</span></div>
+      </div>
+      <div id="touchNote" class="touchNote">🕹 On-screen controls appear during the race</div>
+
+      <div class="menuRow">
+        <span class="menuLabel">Difficulty:</span>
+        <div id="diffBtns"></div>
+      </div>
+
+      <div class="menuRow">
+        <span class="menuLabel">Kart paint:</span>
+        <div id="swatches"></div>
+      </div>
+
+      <div class="menuRow">
+        <span class="menuLabel">Volume:</span>
+        <input type="range" id="volSlider" min="0" max="100" value="70">
+        <button id="menuMuteBtn" class="miniBtn">🔊 Mute</button>
+      </div>
+
+      <div class="menuRow hidden" id="duckToggleRow">
+        <span class="menuLabel">🦆 Duck Mode:</span>
+        <button id="duckToggle" class="miniBtn">OFF</button>
+        <span class="duckHint">quack quack</span>
+      </div>
+
+      <button id="startBtn">🏁 START RACE</button>
+      <div id="bestTime" class="bestTime"></div>
+      <div class="credits">100% procedural — no assets were harmed in the making of this game.</div>
+    </div>
+  </div>
+
+  <!-- ============================= RESULTS SCREEN ============================= -->
+  <div id="results" class="hidden">
+    <div class="resultsCard">
+      <h1 id="resultsTitle">Race Finished!</h1>
+      <div id="resultsSub"></div>
+      <div id="placeBig"></div>
+      <div id="winnerName"></div>
+      <div id="raceTimeRow"></div>
+      <div id="resultsBoard"></div>
+      <div class="resultsButtons">
+        <button id="againBtn">🔁 Race Again</button>
+        <button id="menuBtn">🏠 Back to Menu</button>
+      </div>
+      <div id="resultsTip"></div>
+    </div>
+  </div>
+
+  <!-- ============================= PAUSE ============================= -->
+  <div id="pauseOverlay" class="hidden">
+    <div class="pauseCard">
+      <h2>PAUSED</h2>
+      <button id="resumeBtn">▶ Resume</button>
+      <button id="pauseRestartBtn">🔁 Restart Race</button>
+      <button id="pauseMenuBtn">🏠 Quit to Menu</button>
+    </div>
+  </div>
+
+  <!-- Landscape nudge for phones -->
+  <div id="rotateHint">🔄 Rotate your phone —<br>this race runs in landscape!</div>
+
+  <!-- DOM confetti layer (win screen) -->
+  <div id="confettiLayer"></div>
+
+  <!-- Debug readout (P key) -->
+  <div id="debugPanel" class="hidden"></div>
+
+  <!-- Boot error helper -->
+  <div id="bootError">
+    <div>
+      <h2>🛞 Whoops — could not start the engine</h2>
+      <p id="bootErrorMsg"></p>
+      <p>Make sure you are running this from a local web server (not by double-clicking the file),
+      and that you are online (three.js loads from a CDN):</p>
+      <pre>cd turbo-critter-grand-prix
+python3 -m http.server 8000
+# then open http://localhost:8000</pre>
+    </div>
+  </div>
+
+  <!-- three.js via import map (pinned version, loaded from CDN) -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module" src="main.js"></script>
+  <!-- Service worker: offline play + installability -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('./sw.js').catch(function () {});
+      });
+    }
+  </script>
+</body>
+</html>

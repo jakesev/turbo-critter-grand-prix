@@ -1,0 +1,16 @@
+{
+  "name": "Turbo Critter Grand Prix",
+  "short_name": "TurboCritter",
+  "description": "A colorful 3D kart racer — 8 critters, 3 laps, drifting, items and one suspicious golden duck. 100% procedural, works offline.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#241d47",
+  "theme_color": "#241d47",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
