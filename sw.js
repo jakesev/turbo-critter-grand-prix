@@ -9,7 +9,7 @@
    Bump VERSION whenever shipped files change to invalidate old caches.
    ========================================================================== */
 
-const VERSION = 'tcgp-v1';
+const VERSION = 'tcgp-v2';
 
 const SHELL = [
   './',

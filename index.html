@@ -49,6 +49,12 @@
     <!-- Top-right: mini leaderboard -->
     <div id="board"></div>
 
+    <!-- Mini track map -->
+    <canvas id="minimap" width="150" height="150"></canvas>
+
+    <!-- Nitro screen glow -->
+    <div id="nitroFx"></div>
+
     <!-- Bottom-left: held item -->
     <div id="itemSlot">
       <div id="itemIcon">–</div>
@@ -87,6 +93,18 @@
       </div>
     </div>
 
+    <!-- Asphalt-style steer zones (touch, 'zones' scheme: gas is automatic) -->
+    <div id="zoneWrap">
+      <div class="steerZone" id="zoneL"><span>◀</span></div>
+      <div class="steerZone zoneRight" id="zoneR"><span>▶</span></div>
+      <div id="zoneCol">
+        <button class="tcBtn tcSmall" id="zItem" aria-label="use item">🎁</button>
+        <button class="tcBtn tcSmall" id="zBrake" aria-label="brake">🛑</button>
+        <button class="tcBtn" id="zDrift" aria-label="drift">🌀</button>
+        <button class="tcBtn zNitro" id="zNitro" aria-label="nitro boost">⚡</button>
+      </div>
+    </div>
+
     <!-- Duck Mode secret message (bottom-left corner, tiny) -->
     <div id="secretMsg" class="hidden">The ducks were racing all along.</div>
   </div>
@@ -114,6 +132,11 @@
       <div id="touchNote" class="touchNote">🕹 On-screen controls appear during the race</div>
 
       <div class="menuRow">
+        <span class="menuLabel">Map:</span>
+        <div id="mapBtns"></div>
+      </div>
+
+      <div class="menuRow">
         <span class="menuLabel">Difficulty:</span>
         <div id="diffBtns"></div>
       </div>
@@ -129,6 +152,15 @@
         <button id="menuMuteBtn" class="miniBtn">🔊 Mute</button>
       </div>
 
+      <div class="menuRow">
+        <button id="fxBtn" class="miniBtn">✨ Fancy FX: ON</button>
+      </div>
+
+      <div class="menuRow" id="schemeRow">
+        <span class="menuLabel">Touch controls:</span>
+        <div id="schemeBtns"></div>
+      </div>
+
       <div class="menuRow hidden" id="duckToggleRow">
         <span class="menuLabel">🦆 Duck Mode:</span>
         <button id="duckToggle" class="miniBtn">OFF</button>
@@ -137,6 +169,7 @@
 
       <button id="startBtn">🏁 START RACE</button>
       <div id="bestTime" class="bestTime"></div>
+      <div id="statsLine" class="bestTime statsLine"></div>
       <div class="credits">100% procedural — no assets were harmed in the making of this game.</div>
     </div>
   </div>

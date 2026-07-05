@@ -436,3 +436,61 @@ body.touch #controlsList { display: none; }
 @media (orientation: portrait) { body.touch #rotateHint { display: flex; } }
 
 .diffBtn.sel { border-color: var(--pop-green); color: var(--pop-green); background: rgba(126,224,78,.12); }
+
+/* ============================== MAPS / FX / ZONES / MINIMAP ============================== */
+
+/* Asphalt-style steering zones */
+#zoneWrap { display: none; }
+body.touch.scheme-zones #zoneWrap { display: block; position: absolute; inset: 0; pointer-events: none; }
+body.touch.scheme-zones .tcSide { display: none !important; }
+.steerZone {
+  position: absolute; bottom: 0; left: 0;
+  width: 36%; height: 64%;
+  pointer-events: auto; touch-action: none;
+  display: flex; align-items: flex-end; justify-content: flex-start;
+  padding: 0 0 max(24px, env(safe-area-inset-bottom)) max(22px, env(safe-area-inset-left));
+  -webkit-tap-highlight-color: transparent;
+}
+.steerZone span { font-size: clamp(34px, 8vh, 52px); color: #fff; opacity: .16; }
+.steerZone:active span { opacity: .5; }
+.zoneRight { left: auto; right: 0; justify-content: flex-end; padding: 0 max(22px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) 0; }
+#zoneCol {
+  position: absolute; right: max(12px, env(safe-area-inset-right)); bottom: max(14px, env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; gap: 10px; align-items: center;
+  pointer-events: none; z-index: 3;
+}
+#zoneCol .tcBtn { pointer-events: auto; }
+.zNitro {
+  width: clamp(84px, 24vh, 112px); height: clamp(84px, 24vh, 112px);
+  font-size: clamp(30px, 9vh, 44px);
+  background: rgba(0, 140, 175, .55);
+  border-color: var(--pop-cyan);
+  box-shadow: 0 0 20px rgba(53, 240, 255, .4);
+}
+/* adaptive button sizing for every phone */
+body.touch .tcBtn { width: clamp(56px, 17vh, 76px); height: clamp(56px, 17vh, 76px); }
+body.touch .tcSteer { width: clamp(74px, 22vh, 98px); height: clamp(74px, 22vh, 98px); }
+body.touch .tcGas { width: clamp(88px, 25vh, 112px); height: clamp(88px, 25vh, 112px); }
+body.touch .tcSmall { width: clamp(48px, 14vh, 60px); height: clamp(48px, 14vh, 60px); }
+
+/* minimap */
+#minimap {
+  position: absolute; left: 16px; bottom: 150px;
+  width: 132px; height: 132px;
+  background: rgba(20, 14, 44, .5);
+  border: 2px solid var(--panel-line);
+  border-radius: 14px;
+}
+body.touch #minimap { display: none; }
+
+/* nitro glow */
+#nitroFx {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  opacity: 0; transition: opacity .18s;
+  box-shadow: inset 0 0 130px rgba(53, 240, 255, .5), inset 0 0 46px rgba(53, 240, 255, .28);
+}
+
+.statsLine { color: var(--pop-cyan); margin-top: 3px; }
+#schemeRow { display: none; }
+body.touch #schemeRow { display: flex; }

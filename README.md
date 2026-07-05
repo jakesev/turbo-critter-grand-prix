@@ -21,12 +21,34 @@ Once installed it works **fully offline**, launches fullscreen in landscape, and
 your progress (best time, unlocks, settings) is saved **on that device** —
 every player's phone keeps its own duck-hunting progress. 🦆
 
+## 🗺 Three Grand Prix venues
+
+- **🌳 Sunny Meadows** — the classic: forest, hill tunnel, mud shortcut
+- **🌵 Sunset Dunes** — dusk desert, cacti, canyon tunnel, dry-riverbed shortcut (runs clockwise!)
+- **🌃 Neon City** — night race under glowing towers, neon rails, an underpass and a back-alley shortcut
+
+Each map keeps its own best time on your device.
+
 ## 🌱🏁🔥 Difficulties
 
 Pick in the menu (saved between plays):
 - **Easy** — relaxed rivals, generous catch-up, fewer items thrown at you
 - **Medium** — the balanced race
 - **Hard** — faster, braver bots that drift, boost and use items aggressively, with little mercy catch-up
+
+## 📱 Phone controls (Asphalt-style)
+
+On touch devices the kart **accelerates automatically** — hold the left/right
+side of the screen to steer, with floating buttons for 🎁 item, 🛑 brake,
+🌀 drift and a big ⚡ NITRO. Prefer classic buttons (incl. a GAS pedal)?
+Switch "Touch controls" in the menu. Haptic buzzes on bumps and boosts.
+
+## ✨ Premium graphics
+
+Filmic (ACES) tone mapping, procedural sky domes with a real sun disc,
+metallic kart paint with soft studio reflections, a live minimap, floating
+racer name tags, a nitro screen-glow — and optional **Fancy FX bloom**
+(default on for desktop, toggle in the menu on phones).
 
 ## Run it locally
 
