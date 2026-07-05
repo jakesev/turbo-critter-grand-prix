@@ -9,7 +9,7 @@
    Bump VERSION whenever shipped files change to invalidate old caches.
    ========================================================================== */
 
-const VERSION = 'tcgp-v2';
+const VERSION = 'tcgp-v3';
 
 const SHELL = [
   './',
@@ -21,10 +21,13 @@ const SHELL = [
   './icon-512.png',
   './apple-touch-icon.png',
   './favicon-32.png',
+  './assets/vehicle-truck.glb',
+  './assets/Textures/colormap.png',
 ];
 const CDN = [
   'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js',
   'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/utils/BufferGeometryUtils.js',
+  'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js',
 ];
 
 self.addEventListener('install', (e) => {

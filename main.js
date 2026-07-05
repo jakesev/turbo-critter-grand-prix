@@ -28,6 +28,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 /* =====================================================================
    1. UTILITIES & SAVED DATA
@@ -360,20 +361,52 @@ const UI = (() => {
     'menu','startBtn','menuMuteBtn','volSlider','swatches','duckToggleRow','duckToggle','bestTime',
     'results','resultsTitle','resultsSub','placeBig','winnerName','raceTimeRow','resultsBoard',
     'againBtn','menuBtn','resultsTip','pauseOverlay','resumeBtn','pauseRestartBtn','pauseMenuBtn',
-    'confettiLayer','debugPanel','diffBtns','pauseBtn','minimap','nitroFx','mapBtns','fxBtn','schemeBtns','schemeRow','statsLine'];
+    'confettiLayer','debugPanel','diffBtns','pauseBtn','minimap','nitroFx','mapBtns','fxBtn','schemeBtns','schemeRow','statsLine','vehicleBtns'];
   const o = {};
   ids.forEach((id) => { o[id] = $(id); });
   return o;
 })();
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+const IS_TOUCH_DEVICE = navigator.maxTouchPoints > 0 || 'ontouchstart' in window;
+
+/** Create the renderer, retrying briefly — after a GPU crash the browser can
+    refuse the first context request but grant one moments later. */
+function makeRenderer (attempt = 0) {
+  try {
+    return new THREE.WebGLRenderer({ antialias: !IS_TOUCH_DEVICE, powerPreference: 'high-performance' });
+  } catch (e) {
+    if (attempt < 2) {
+      const wait = 600 * (attempt + 1);
+      const note = document.getElementById('bootErrorMsg');
+      if (note) note.textContent = 'GPU is waking up, retrying…';
+      const start = performance.now();
+      while (performance.now() - start < wait) { /* brief blocking wait */ }
+      return makeRenderer(attempt + 1);
+    }
+    throw e;
+  }
+}
+const renderer = makeRenderer();
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, IS_TOUCH_DEVICE ? 1.75 : 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;      // premium filmic response
 renderer.toneMappingExposure = 1.1;
 document.getElementById('app').appendChild(renderer.domElement);
+
+// If the GPU process dies (the "white flash"), restart the engine cleanly
+// instead of leaving a dead page.
+renderer.domElement.addEventListener('webglcontextlost', (e) => {
+  e.preventDefault();
+  const el = document.getElementById('bootError');
+  if (el) {
+    el.style.display = 'flex';
+    const msg = document.getElementById('bootErrorMsg');
+    if (msg) msg.textContent = 'The graphics engine stalled — restarting the race…';
+  }
+  setTimeout(() => window.location.reload(), 900);
+});
 
 const scene = new THREE.Scene();
 scene.fog = new THREE.Fog(0x9fdcff, 220, 640);          // retinted per map
@@ -386,7 +419,7 @@ scene.add(hemiLight);
 const sun = new THREE.DirectionalLight(0xfff3d6, 1.9);
 sun.position.set(140, 190, 90);
 sun.castShadow = true;
-sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.mapSize.set(IS_TOUCH_DEVICE ? 1024 : 2048, IS_TOUCH_DEVICE ? 1024 : 2048);
 sun.shadow.camera.left = -300; sun.shadow.camera.right = 300;
 sun.shadow.camera.top = 300;   sun.shadow.camera.bottom = -300;
 sun.shadow.camera.far = 700;
@@ -394,10 +427,12 @@ sun.shadow.bias = -0.0004;
 scene.add(sun);
 
 // soft studio reflections so metallic paint reads "premium"
-const pmrem = new THREE.PMREMGenerator(renderer);
-try { scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture; }
-catch (e) { console.warn('env map unavailable', e); }
-scene.environmentIntensity = 0.5;
+if (!IS_TOUCH_DEVICE) {
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  try { scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture; }
+  catch (e) { console.warn('env map unavailable', e); }
+  scene.environmentIntensity = 0.5;
+}
 
 // optional bloom pipeline ("Fancy FX") — desktop default on, phones default off
 let composer = null, bloomPass = null;
@@ -406,7 +441,7 @@ function setupComposer () {
   composer = new EffectComposer(renderer);
   composer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   composer.addPass(new RenderPass(scene, camera));
-  bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.32, 0.55, 0.82);
+  bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth >> 1, window.innerHeight >> 1), 0.32, 0.55, 0.82);
   composer.addPass(bloomPass);
   composer.addPass(new OutputPass());
 }
@@ -913,7 +948,7 @@ function buildWorld (cfg) {
     line.receiveShadow = true; line.userData.ownMat = true;
     G.add(line);
 
-    const archMat = new THREE.MeshLambertMaterial({ color: 0xff4f9a });
+    const archMat = SHARED_MATS.arch;
     for (const latSign of [1, -1]) {
       const p = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.9, 11, 10), archMat);
       p.position.copy(L.pos).addScaledVector(s.side, latSign * (s.w + 2)).setY(5.5);
@@ -1097,11 +1132,11 @@ function buildWorld (cfg) {
     const idx = nearestIdx(x, z);
     const s = world.samples[idx];
     for (const f of [-0.66, -0.22, 0.22, 0.66]) {
-      const mesh = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.5, 1.5), new THREE.MeshNormalMaterial());
+      const mesh = new THREE.Mesh(SHARED_MATS.boxGeo, SHARED_MATS.boxMat);
       const p = s.pos.clone().addScaledVector(s.side, f * s.w).setY(1.25);
       mesh.position.copy(p);
       mesh.castShadow = true;
-      mesh.userData.sharedGeo = false;
+      mesh.userData.sharedGeo = true;   // never dispose the shared box assets
       G.add(mesh);
       world.boxes.push({ mesh, pos: p.clone(), active: true, t: 0, spin: Math.random() * 6 });
     }
@@ -1473,7 +1508,13 @@ function buildDecor (cfg, G) {
   G.add(scSign);
 }
 
-/* shared coin assets (never disposed on map change) */
+/* shared assets (never disposed on map change) */
+const SHARED_MATS = {
+  arch: new THREE.MeshLambertMaterial({ color: 0xff4f9a }),
+  boxGeo: new THREE.BoxGeometry(1.5, 1.5, 1.5),
+  boxMat: new THREE.MeshNormalMaterial(),
+};
+
 const coinGeo = new THREE.CylinderGeometry(0.65, 0.65, 0.14, 14);
 coinGeo.rotateX(Math.PI / 2);
 const coinMat = new THREE.MeshStandardMaterial({ color: 0xffd23f, metalness: 0.75, roughness: 0.25, emissive: 0x6b4d00 });
@@ -1663,7 +1704,7 @@ function buildKart (bodyColor, helmetColor) {
   beak.rotation.x = Math.PI / 2;
   beak.position.set(0, 1.7, 0.05);
   beak.visible = false;
-  body.add(beak);
+  root.add(beak);   // on the root so it fits every vehicle style
 
   // spoiler
   for (const sx of [-1, 1]) {
@@ -1711,6 +1752,58 @@ function buildKart (bodyColor, helmetColor) {
 
   root.traverse((o) => { if (o.isMesh && o !== shield) { o.castShadow = true; } });
   return { root, body, wheels, frontPivots, beak, shield, bodyMat, flameAnchors };
+}
+
+/* ---------- real vehicle model: Kenney "Starter Kit Racing" truck (CC0/MIT) ----------
+   Loaded async; until it arrives (or if it fails) the procedural karts race on. */
+let TRUCK_GLTF = null, TRUCK_BASE_MAT = null;
+let vehicleStyle = SAVE.get('vehicle', 'trucks');
+const TRUCK_TINT_CACHE = {};
+
+/** Clone the shared palette texture with the truck-paint pixels re-hued. */
+function truckTexFor (hex) {
+  if (TRUCK_TINT_CACHE[hex]) return TRUCK_TINT_CACHE[hex];
+  const img = TRUCK_BASE_MAT.map.image;
+  const c = document.createElement('canvas');
+  c.width = img.width; c.height = img.height;
+  const x = c.getContext('2d');
+  x.drawImage(img, 0, 0);
+  const d = x.getImageData(0, 0, c.width, c.height);
+  const p = d.data;
+  const t = new THREE.Color(hex);
+  for (let i = 0; i < p.length; i += 4) {
+    const r = p[i], g = p[i + 1], b = p[i + 2];
+    if (r > 140 && r > g * 1.35 && r > b * 1.35) {   // the red-paint family
+      const lum = (r + g + b) / 422;                  // relative to the base paint shade
+      p[i]     = Math.min(255, t.r * 255 * lum);
+      p[i + 1] = Math.min(255, t.g * 255 * lum);
+      p[i + 2] = Math.min(255, t.b * 255 * lum);
+    }
+  }
+  x.putImageData(d, 0, 0);
+  const tex = new THREE.CanvasTexture(c);
+  tex.flipY = false;                                  // glTF UV convention
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.magFilter = THREE.NearestFilter;
+  tex.minFilter = THREE.NearestMipmapNearestFilter;
+  TRUCK_TINT_CACHE[hex] = tex;
+  return tex;
+}
+
+/** One tinted truck instance with animatable wheel nodes. */
+function makeTruck (hex) {
+  const group = TRUCK_GLTF.scene.clone(true);
+  const mat = TRUCK_BASE_MAT.clone();
+  mat.map = truckTexFor(hex);
+  const wheels = [];
+  group.traverse((o) => {
+    if (o.isMesh) { o.material = mat; o.castShadow = true; }
+    if (/^wheel-/.test(o.name)) {
+      o.rotation.order = 'YXZ';                       // steer (Y) then spin (X)
+      wheels.push({ node: o, front: o.name.includes('front') });
+    }
+  });
+  return { group, mat, wheels };
 }
 
 /** The seven rival critters — different skill, nerve and quirks. */
@@ -1794,6 +1887,27 @@ class Racer {
   setColor (hex) {
     this.color = hex;
     this.kart.bodyMat.color.setHex(hex);
+    if (this.truck) this.truck.mat.map = truckTexFor(hex);
+  }
+
+  /** Attach the Kenney truck model once it has loaded. */
+  applyTruck () {
+    if (!TRUCK_GLTF || this.truck) return;
+    const t = makeTruck(this.color);
+    t.group.scale.setScalar(1.3);
+    this.kart.root.add(t.group);
+    this.truck = t;
+    this.updateVehicleStyle();
+  }
+
+  /** Show the truck model or the classic procedural kart. */
+  updateVehicleStyle () {
+    const trucks = vehicleStyle === 'trucks' && !!this.truck;
+    if (this.truck) this.truck.group.visible = trucks;
+    this.kart.body.visible = !trucks;
+    // duck beak sits on the hood (truck) or in front of the helmet (kart)
+    if (trucks) { this.kart.beak.position.set(0, 1.5, 2.1); this.kart.beak.scale.setScalar(1.2); }
+    else { this.kart.beak.position.set(0, 1.7, 0.05); this.kart.beak.scale.setScalar(1); }
   }
 
   /** Put the racer on its grid slot and zero all race state. */
@@ -2223,6 +2337,12 @@ class Racer {
     const spin = this.speed * dt / 0.44;
     for (const w of k.wheels) w.rotation.x += spin;
     for (const p of k.frontPivots) p.rotation.y = -this.steer * 0.42;
+    if (this.truck && this.truck.group.visible) {
+      for (const w of this.truck.wheels) {
+        w.node.rotation.x += this.speed * dt / 0.5;
+        if (w.front) w.node.rotation.y = -this.steer * 0.45;
+      }
+    }
     // shield + duck beak
     k.shield.visible = this.shielded;
     if (k.shield.visible) k.shield.material.opacity = 0.16 + 0.08 * Math.sin(time * 6);
@@ -3074,8 +3194,14 @@ function updateStatsLine () {
 function setMap (key) {
   if (!MAP_BY_KEY[key]) key = 'meadows';
   if (world.mapKey !== key) {
-    buildWorld(MAP_BY_KEY[key]);
-    placeGrid();
+    try {
+      buildWorld(MAP_BY_KEY[key]);
+      placeGrid();
+      renderer.compile(scene, camera);   // front-load shader compiles in one go
+    } catch (e) {
+      console.error('map build failed, falling back to meadows', e);
+      if (key !== 'meadows') { setMap('meadows'); return; }
+    }
   }
   SAVE.set('map', key);
   [...UI.mapBtns.children].forEach((b) => b.classList.toggle('sel', b.dataset.k === key));
@@ -3089,6 +3215,23 @@ MAPS.forEach((mp) => {
   b.addEventListener('click', () => setMap(mp.key));
   UI.mapBtns.appendChild(b);
 });
+
+// vehicle style selector
+function setVehicle (key) {
+  vehicleStyle = key;
+  SAVE.set('vehicle', key);
+  [...UI.vehicleBtns.children].forEach((b) => b.classList.toggle('sel', b.dataset.k === key));
+  racers.forEach((r) => r.updateVehicleStyle());
+}
+[['trucks', '🛻 Turbo Trucks'], ['karts', '🧸 Classic Karts']].forEach(([k, label]) => {
+  const b = document.createElement('button');
+  b.className = 'miniBtn diffBtn';
+  b.dataset.k = k;
+  b.textContent = label;
+  b.addEventListener('click', () => setVehicle(k));
+  UI.vehicleBtns.appendChild(b);
+});
+setVehicle(vehicleStyle);
 
 // fancy-FX (bloom) toggle
 function setFX (on) {
@@ -3348,6 +3491,13 @@ window.TCGP = {
   setDuckMode, toggleDebug, setDifficulty, setMap, MAPS,
   get DIFF () { return DIFF; },
 };
+
+// load the real vehicle models (async; procedural karts race until then)
+new GLTFLoader().load('assets/vehicle-truck.glb', (g) => {
+  TRUCK_GLTF = g;
+  g.scene.traverse((o) => { if (o.isMesh && !TRUCK_BASE_MAT) TRUCK_BASE_MAT = o.material; });
+  racers.forEach((r) => r.applyTruck());
+}, undefined, (e) => console.warn('vehicle model unavailable — using procedural karts', e));
 
 // arrange the menu diorama and go
 placeGrid();

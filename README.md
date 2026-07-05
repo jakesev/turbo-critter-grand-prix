@@ -43,6 +43,15 @@ side of the screen to steer, with floating buttons for 🎁 item, 🛑 brake,
 🌀 drift and a big ⚡ NITRO. Prefer classic buttons (incl. a GAS pedal)?
 Switch "Touch controls" in the menu. Haptic buzzes on bumps and boosts.
 
+## 🛻 Real 3D vehicle models
+
+Racers drive **Kenney's racing trucks** (from the CC0/MIT
+[Starter Kit Racing](https://github.com/KenneyNL/Starter-Kit-Racing) — thanks
+Kenney!), re-tinted per racer at runtime via a palette recolor, with spinning
++ steering wheel rigs. Prefer the original hand-built look? Switch
+**Vehicle → 🧸 Classic Karts** in the menu. If the model can't load, the
+procedural karts race automatically. See `assets/CREDITS.md`.
+
 ## ✨ Premium graphics
 
 Filmic (ACES) tone mapping, procedural sky domes with a real sun disc,
